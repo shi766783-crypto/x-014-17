@@ -1,13 +1,16 @@
 export const today = new Date().toISOString().slice(0, 10)
 const days = (date) => Math.ceil((new Date(`${date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000)
 export const config = {
-  storageKey: 'family-document-keeper-v1',
+  storageKey: 'family-document-keeper-v2',
+  reminderDays: 30,
   brand: '家档管家', subtitle: 'Family Archive', icon: 'FolderLock', entityLabel: '证件档案', secondaryLabel: '家庭保险', historyLabel: '使用记录', heroTitle: '让重要文件，始终井然有序。', heroCopy: '证件、保单和家庭文件，都有清晰的去处与提醒。', createLabel: '新建档案',
   nav: [{ id: 'overview', label: '总览' }, { id: 'documents', label: '证件档案' }, { id: 'history', label: '使用记录' }, { id: 'insurance', label: '家庭保险' }, { id: 'achievements', label: '成就与榜单' }],
   metrics: [
     { label: '证件总数', collection: 'documents', tone: 'green' },
-    { label: '90天内到期', tone: 'peach', value: (s) => s.documents.filter((x) => x.expires && days(x.expires) >= 0 && days(x.expires) <= 90).length },
-    { label: '已过期', tone: 'red', value: (s) => s.documents.filter((x) => x.expires && days(x.expires) < 0).length },
+    { label: '90天内证件到期', tone: 'peach', value: (s) => s.documents.filter((x) => x.expires && days(x.expires) >= 0 && days(x.expires) <= 90).length },
+    { label: '证件已过期', tone: 'red', value: (s) => s.documents.filter((x) => x.expires && days(x.expires) < 0).length },
+    { label: '30天内待续费保单', tone: 'peach', value: (s) => s.policies.filter((x) => days(x.nextPaymentDate) >= 0 && days(x.nextPaymentDate) <= 30 && days(x.expires) >= 0).length },
+    { label: '逾期失效保单', tone: 'red', value: (s) => s.policies.filter((x) => days(x.nextPaymentDate) < 0 && days(x.expires) >= 0).length },
     { label: '外借未还', tone: 'blue', value: (s) => s.usages.filter((x) => x.status === '借用中').length },
   ],
   form: { title: '新建证件档案', collection: 'documents', fields: [
@@ -19,10 +22,26 @@ export const config = {
 export const seed = {
   documents: [
     { id: 'doc-1', name: '林小满身份证', category: '身份类', holder: '林小满', number: '110***********', issued: '2023-01-18', expires: '2033-01-18', issuer: '杭州市公安局', location: '保险柜 · A-02', copyLocation: '家庭云盘 / 身份证', notes: '正反面已扫描' },
-    { id: 'doc-2', name: '家庭医疗保险合同', category: '医疗类', holder: '林家', number: 'POL-2026-019', issued: '2026-01-01', expires: '2026-11-20', issuer: '安和保险', location: '书房文件盒', copyLocation: '云盘 / 保单', notes: '续保前确认受益人' },
+    { id: 'doc-2', name: '家庭医疗保险合同', category: '医疗类', holder: '林家', number: 'POL-2026-019', issued: '2026-01-01', expires: '2027-09-29', issuer: '安和保险', location: '书房文件盒', copyLocation: '云盘 / 保单', notes: '续保前确认受益人' },
     { id: 'doc-3', name: '周末房产合同', category: '资产类', holder: '林小满', number: 'PROP-0081', issued: '2024-06-12', expires: '2026-08-10', issuer: '杭城置业', location: '主卧抽屉', copyLocation: '云盘 / 房产', notes: '已过期的合同提醒仅供归档' },
   ],
   usages: [{ id: 'use-1', documentId: 'doc-1', date: '2026-09-16', purpose: '办理银行业务', borrower: '林小满', status: '借用中', note: '周五归还' }, { id: 'use-2', documentId: 'doc-2', date: '2026-08-11', purpose: '理赔资料', borrower: '林小满', status: '已归还', note: '' }],
-  policies: [{ id: 'pol-1', company: '安和保险', type: '家庭医疗险', number: 'AH-33001', insured: '林家', expires: '2026-11-20', premium: 2890, payment: '年缴' }],
+  policies: [
+    {
+      id: 'pol-1', company: '安和保险', type: '家庭医疗险', number: 'AH-33001', insured: '林家',
+      startedAt: '2025-09-30', expires: '2027-09-29', premium: 2890, billingCycle: 'annual', nextPaymentDate: '2026-09-30',
+      paymentHistory: [
+        { id: 'pay-pol-1-1', policyId: 'pol-1', dueDate: '2025-09-30', paidDate: '2025-09-28', periodStart: '2025-09-30', periodEnd: '2026-09-29', premiumAmount: 2600, billingCycle: 'annual' },
+      ],
+    },
+    {
+      id: 'pol-2', company: '安泰人寿', type: '少儿意外保障', number: 'AT-08126', insured: '林乐乐',
+      startedAt: '2026-07-18', expires: '2027-04-17', premium: 86, billingCycle: 'monthly', nextPaymentDate: '2026-10-18',
+      paymentHistory: [
+        { id: 'pay-pol-2-1', policyId: 'pol-2', dueDate: '2026-08-18', paidDate: '2026-08-18', periodStart: '2026-08-18', periodEnd: '2026-09-17', premiumAmount: 82, billingCycle: 'monthly' },
+        { id: 'pay-pol-2-2', policyId: 'pol-2', dueDate: '2026-09-18', paidDate: '2026-09-18', periodStart: '2026-09-18', periodEnd: '2026-10-17', premiumAmount: 86, billingCycle: 'monthly' },
+      ],
+    },
+  ],
 }
 export { days }
